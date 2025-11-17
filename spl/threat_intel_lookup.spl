@@ -1,1 +1,11 @@
+# threat_intel_lookup.spl
+# Enrich SSH events with local threat intel CSV: threat_intel_blacklist.csv
+
+index=* source="/var/log/auth.log"
+| rex "from (?<src_ip>\S+)"
+| rex "for (?<user>\S+) from"
+| lookup threat_intel_blacklist src_ip OUTPUT threat_level description
+| where isnotnull(threat_level)
+| table _time src_ip user threat_level description _raw
+| sort - _time
 
