@@ -1,1 +1,14 @@
+# cron_persistence.spl
+# Detect suspicious cron jobs (possible persistence / malware)
+
+index=* (source="/var/log/syslog" OR source="/var/log/cron")
+| rex field=_raw "CRON\[(?<pid>\d+)\]: \((?<user>[^\)]+)\) CMD \((?<cmd>.+)\)"
+| eval is_suspicious = if(
+    match(cmd, "(wget|curl|nc |bash -c|/tmp/|/dev/shm|python|perl)"),
+    1,
+    0
+  )
+| where is_suspicious = 1
+| table _time host user cmd pid _raw
+| sort - _time
 
