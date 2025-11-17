@@ -1,0 +1,7 @@
+src_ip,threat_level,description
+45.155.205.123,high,Known SSH brute-force attacker
+23.234.54.12,medium,Previous botnet activity
+91.121.79.58,high,Multiple SSH dictionary attacks
+185.234.219.55,medium,Suspicious IP reported by AbuseIPDB
+103.86.99.22,high,Common Kali Linux VPN exit node
+127.0.0.1,high,TEST - Local brute-force attacker
