@@ -1,1 +1,15 @@
+# port_scan_detection.spl
+# Detect potential port scans based on many destination ports in short time
+
+index=* (source="/var/log/kern.log" OR source="/var/log/ufw.log" OR sourcetype=firewall)
+| rex field=_raw "SRC=(?<src_ip>\S+)"
+| rex field=_raw "DPT=(?<dest_port>\d+)"
+| bucket _time span=1m
+| stats
+    dc(dest_port)        AS unique_ports
+    values(dest_port)    AS ports_scanned
+    count                AS total_events
+  by src_ip, _time
+| where unique_ports >= 20
+| sort - unique_ports
 
