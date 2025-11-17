@@ -280,7 +280,6 @@ Windows event log hunting
 
 📧 Contact
 
-Your Name
+Krubhanandhan Krishnan
 SOC Analyst / Threat Hunter
-GitHub: your link
-LinkedIn: your link
+LinkedIn:www.linkedin.com/in/krubhanandhan-krishnan-3954a0384
