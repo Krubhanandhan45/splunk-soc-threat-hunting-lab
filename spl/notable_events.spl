@@ -1,1 +1,37 @@
+# notable_events.spl
+# Create a stream of "notable" high-risk events from risk scoring
+
+index=* source="/var/log/auth.log"
+| rex "from (?<src_ip>\S+)"
+| rex "for (?<user>\S+) from"
+| eval status = case(
+    match(_raw, "Failed password"), "failed",
+    match(_raw, "Accepted password"), "success",
+    true(), "other"
+  )
+| stats
+    count(eval(status="failed"))   AS failed_logins
+    count(eval(status="success"))  AS successful_logins
+    earliest(_time)                AS first_seen
+    latest(_time)                  AS last_seen
+    values(status)                 AS status_values
+  by src_ip user
+| eval brute_force_score = if(failed_logins >= 5 AND successful_logins >= 1, 40, 0)
+| lookup threat_intel_blacklist src_ip OUTPUT threat_level description
+| eval ti_score = case(
+    threat_level="high",   50,
+    threat_level="medium", 30,
+    threat_level="low",    10,
+    true(),                0
+  )
+| eval risk_score = brute_force_score + ti_score
+| where risk_score >= 60
+| eval notable_severity = case(
+    risk_score >= 80, "critical",
+    risk_score >= 60, "high",
+    true(),           "medium"
+  )
+| eval title = "Notable SSH activity from " . src_ip . " (user=" . user . ")"
+| table title src_ip user risk_score notable_severity failed_logins successful_logins threat_level description first_seen last_seen
+| sort - risk_score
 
