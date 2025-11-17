@@ -1,1 +1,39 @@
+Alert Name: Notable SSH Security Event
+
+Purpose:
+Detect high or critical severity events generated via risk_score pipeline.
+
+SPL Query:
+index=* source="/var/log/auth.log"
+| rex "from (?<src_ip>\S+)"
+| rex "for (?<user>\S+) from"
+| eval status = case(
+    match(_raw,"Failed password"),"failed",
+    match(_raw,"Accepted password"),"success",
+    true(),"other")
+| stats 
+    count(eval(status="failed")) as failed_logins
+    count(eval(status="success")) as successful_logins
+    earliest(_time) as first_seen
+    latest(_time) as last_seen
+  by src_ip user
+| lookup threat_intel_blacklist src_ip OUTPUT threat_level description
+| eval risk_score = 
+    (if(failed_logins>=5 AND successful_logins>=1,40,0)) +
+    (case(threat_level="high",50, threat_level="medium",30, true(),0))
+| where risk_score >= 60
+| eval notable_severity = if(risk_score>=80,"critical","high")
+| table src_ip user risk_score notable_severity failed_logins successful_logins threat_level description first_seen last_seen
+
+Trigger Condition:
+- notable_severity = high OR critical
+
+Severity:
+High / Critical
+
+Recommended Response:
+1. Isolate impacted host if confirmed intrusion.
+2. Reset user passwords.
+3. Review logs for privilege escalation.
+4. Document event in IR platform.
 
