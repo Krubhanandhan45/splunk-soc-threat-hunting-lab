@@ -1,1 +1,29 @@
+# correlation_rule.spl
+# Correlate brute-force behaviour with threat intel reputation
+
+index=* source="/var/log/auth.log"
+| rex "from (?<src_ip>\S+)"
+| rex "for (?<user>\S+) from"
+| eval status = case(
+    match(_raw, "Failed password"), "failed",
+    match(_raw, "Accepted password"), "success",
+    true(), "other"
+  )
+| stats
+    count(eval(status="failed"))   AS failed_attempts
+    count(eval(status="success"))  AS success_attempts
+    values(user)                   AS users
+    earliest(_time)                AS first_seen
+    latest(_time)                  AS last_seen
+  by src_ip
+| where failed_attempts >= 5 AND success_attempts >= 1
+| lookup threat_intel_blacklist src_ip OUTPUT threat_level description
+| eval correlation_reason = case(
+    isnotnull(threat_level),
+      "Brute-force followed by success from known malicious IP",
+    true(),
+      "Brute-force followed by success from unknown IP"
+  )
+| table src_ip failed_attempts success_attempts threat_level description correlation_reason first_seen last_seen users
+| sort - failed_attempts
 
