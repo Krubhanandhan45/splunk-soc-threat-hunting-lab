@@ -1,1 +1,31 @@
+Alert Name: SSH Brute-Force → Success Detected
+
+Purpose:
+Detect repeated SSH failed logins followed by a successful login. Indicates a likely brute-force attack.
+
+SPL Query:
+index=* source="/var/log/auth.log"
+| rex "from (?<src_ip>\S+)"
+| rex "for (?<user>\S+) from"
+| eval status = case(
+    match(_raw, "Failed password"), "failed",
+    match(_raw, "Accepted password"), "success",
+    true(), "other")
+| stats 
+    count(eval(status="failed")) as failed_attempts
+    count(eval(status="success")) as success_attempts
+    values(user) as users
+  by src_ip
+| where failed_attempts >= 5 AND success_attempts >= 1
+
+Trigger Condition:
+- Fired when 5+ failed attempts AND 1+ success is observed from same IP.
+
+Severity: High
+
+Recommended Response:
+1. Immediately block the source IP.
+2. Reset affected user credentials.
+3. Search for lateral movement from this user or IP.
+4. Notify SOC manager if privileged users involved.
 
