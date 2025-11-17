@@ -1,1 +1,25 @@
+Alert Name: Threat Intel Match → Malicious IP Activity
+
+Purpose:
+Trigger when an SSH event involves an IP listed in threat_intel_blacklist.csv.
+
+SPL Query:
+index=* source="/var/log/auth.log"
+| rex "from (?<src_ip>\S+)"
+| lookup threat_intel_blacklist src_ip OUTPUT threat_level description
+| where isnotnull(threat_level)
+| table _time src_ip threat_level description _raw
+
+Trigger Condition:
+- Fired when any src_ip appears in threat_intel_blacklist lookup.
+
+Severity:
+- high if threat_level=high
+- medium if threat_level=medium
+
+Recommended Response:
+1. Block IP globally at firewall.
+2. Investigate recent activity from this IP.
+3. Check for compromise of accounts accessed.
+4. Create ticket for IR follow-up.
 
