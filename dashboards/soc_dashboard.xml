@@ -1,1 +1,146 @@
-
+<dashboard version="1.1" theme="light">
+  <label>SOC Monitoring Dashboard</label>
+  <description>Correlation of failed SSH attempts followed by success</description>
+  <row>
+    <panel>
+      <title>SSH Brute-Force Attempts</title>
+      <table>
+        <search>
+          <query>index=* source="/var/log/auth.log"
+| rex "for (invalid user\s+)?(?&lt;user&gt;\S+) from (?&lt;src_ip&gt;\S+)"
+| eval status=case(
+    match(_raw,"Failed password"),    "failed",
+    match(_raw,"Accepted password"),  "success",
+    true(),                           "other"
+  )
+| stats 
+    count(eval(status="failed"))   AS failed_attempts
+    count(eval(status="success"))  AS success_attempts
+    values(user)                   AS users
+  BY src_ip
+| where failed_attempts &gt;= 5 AND success_attempts &gt;= 1</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Port Scan Detection – Unique Ports per Source IP</title>
+      <table>
+        <search>
+          <query>index=* source="/var/log/syslog" "CONN src="
+| rex "src=(?&lt;src_ip&gt;\S+)\s+dst=(?&lt;dest_ip&gt;\S+)\s+dport=(?&lt;dest_port&gt;\d+)"
+| stats 
+    dc(dest_port) AS unique_ports
+    count         AS total_events
+    values(dest_port) AS ports_scanned
+  BY src_ip dest_ip
+| where unique_ports &gt;= 10
+| sort -unique_ports</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Threat Intel: Malicious SSH Sources</title>
+      <table>
+        <search>
+          <query>index=* source="/var/log/auth.log"
+| rex "from (?&lt;src_ip&gt;\S+)"
+| lookup threat_intel_blacklist src_ip OUTPUT threat_level description
+| where isnotnull(threat_level)
+| stats count BY src_ip threat_level description
+| sort - count</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Malicious IP Detections (Threat Intel Lookup)</title>
+      <table>
+        <search>
+          <query>index=* source="/var/log/auth.log"
+| rex "from (?&lt;src_ip&gt;\S+)"
+| lookup threat_intel_blacklist src_ip OUTPUT threat_level description
+| where isnotnull(threat_level)
+| stats count BY src_ip threat_level description
+| sort - count</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Risk Score by Source IP</title>
+      <table>
+        <search>
+          <query>index=* source="/var/log/auth.log"
+| rex "from (?&lt;src_ip&gt;\S+)"
+| lookup threat_intel_blacklist src_ip OUTPUT threat_level description
+| eval risk_score =
+    case(
+        threat_level=="high", 90,
+        threat_level=="medium", 60,
+        threat_level=="low", 30,
+        true(), 10
+    )
+| where isnotnull(threat_level)
+| stats sum(risk_score) AS total_risk BY src_ip
+| sort - total_risk</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</dashboard>
