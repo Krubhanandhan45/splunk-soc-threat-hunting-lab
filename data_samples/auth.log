@@ -1,1 +1,18 @@
+Nov 17 00:28:40 ubuntu sshd[27395]: Failed password for invalid user admin from 45.155.205.123 port 44316 ssh2
+Nov 17 00:28:42 ubuntu sshd[27395]: Failed password for invalid user test from 45.155.205.123 port 44316 ssh2
+Nov 17 00:28:45 ubuntu sshd[27395]: Failed password for invalid user guest from 45.155.205.123 port 44316 ssh2
+
+Nov 17 00:28:46 ubuntu sshd[27395]: Accepted password for ubuntu from 127.0.0.1 port 47872 ssh2
+
+Nov 17 00:29:03 ubuntu sshd[27418]: Failed password for invalid user demo from 23.234.54.12 port 33440 ssh2
+Nov 17 00:29:06 ubuntu sshd[27512]: Invalid user wronguser from 23.234.54.12 port 33440 ssh2
+Nov 17 00:29:08 ubuntu sshd[27522]: Failed password for invalid user ftp from 23.234.54.12 port 33440 ssh2
+
+Nov 17 00:29:14 ubuntu sshd[27567]: Failed password for invalid user oracle from 91.121.79.58 port 55110 ssh2
+Nov 17 00:29:17 ubuntu sshd[27567]: Failed password for invalid user admin from 91.121.79.58 port 55110 ssh2
+Nov 17 00:29:20 ubuntu sshd[27567]: Failed password for invalid user support from 91.121.79.58 port 55110 ssh2
+
+Nov 17 00:29:26 ubuntu sshd[27598]: Failed password for ubuntu from 185.234.219.55 port 44390 ssh2
+Nov 17 00:29:29 ubuntu sshd[27598]: Failed password for ubuntu from 185.234.219.55 port 44390 ssh2
+Nov 17
 
