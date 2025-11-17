@@ -1,1 +1,28 @@
+# risk_scoring.spl
+# Combine brute-force behaviour + threat intel into a simple risk score
+
+index=* source="/var/log/auth.log"
+| rex "from (?<src_ip>\S+)"
+| rex "for (?<user>\S+) from"
+| eval status = case(
+    match(_raw, "Failed password"), "failed",
+    match(_raw, "Accepted password"), "success",
+    true(), "other"
+  )
+| stats
+    count(eval(status="failed"))   AS failed_logins
+    count(eval(status="success"))  AS successful_logins
+  by src_ip user
+| eval brute_force_score = if(failed_logins >= 5 AND successful_logins >= 1, 40, 0)
+| lookup threat_intel_blacklist src_ip OUTPUT threat_level
+| eval ti_score = case(
+    threat_level="high",   50,
+    threat_level="medium", 30,
+    threat_level="low",    10,
+    true(),                0
+  )
+| eval risk_score = brute_force_score + ti_score
+| where risk_score > 0
+| table src_ip user failed_logins successful_logins threat_level brute_force_score ti_score risk_score
+| sort - risk_score
 
