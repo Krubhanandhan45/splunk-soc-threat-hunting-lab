@@ -1,1 +1,19 @@
+# brute_force_detection.spl
+# Detect SSH brute-force attempts from /var/log/auth.log
+
+index=* source="/var/log/auth.log"
+| rex "from (?<src_ip>\S+)"
+| rex "for (?<user>\S+) from"
+| eval status = case(
+    match(_raw, "Failed password"), "failed",
+    match(_raw, "Accepted password"), "success",
+    true(), "other"
+  )
+| stats
+    count(eval(status="failed"))   AS failed_attempts
+    count(eval(status="success"))  AS success_attempts
+    values(user)                   AS users
+  by src_ip
+| where failed_attempts >= 5 AND success_attempts >= 1
+| sort - failed_attempts
 
