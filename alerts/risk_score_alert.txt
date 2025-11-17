@@ -1,0 +1,38 @@
+Alert Name: High-Risk SSH Activity Detected
+
+Purpose:
+Notify when risk score exceeds threshold (>=60).
+
+SPL Query:
+index=* source="/var/log/auth.log"
+| rex "from (?<src_ip>\S+)"
+| rex "for (?<user>\S+) from"
+| eval status = case(
+    match(_raw,"Failed password"), "failed",
+    match(_raw,"Accepted password"), "success",
+    true(), "other")
+| stats 
+    count(eval(status="failed")) as failed_logins
+    count(eval(status="success")) as successful_logins
+  by src_ip user
+| eval brute_force_score = if(failed_logins>=5 AND successful_logins>=1,40,0)
+| lookup threat_intel_blacklist src_ip OUTPUT threat_level
+| eval ti_score = case(
+    threat_level="high",50,
+    threat_level="medium",30,
+    true(),0)
+| eval risk_score = brute_force_score + ti_score
+| where risk_score >= 60
+
+Trigger Condition:
+- risk_score >= 60
+
+Severity:
+Critical
+
+Recommended Response:
+1. Treat as confirmed malicious activity.
+2. Block IP immediately.
+3. Hunt for unauthorized access.
+4. Perform full timeline investigation.
+5. Escalate to Incident Response.
